@@ -1,9 +1,6 @@
-FROM python:3.10-slim
+FROM python:3.10
 
 WORKDIR /app
-
-# Install ffmpeg
-RUN apt-get update && apt-get install -y ffmpeg
 
 COPY requirements.txt .
 

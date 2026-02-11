@@ -4,7 +4,7 @@ import shutil
 import os
 from transformers import pipeline
 import traceback
-
+import uvicorn
 app = FastAPI()
 
 whisper_model = whisper.load_model("base")
@@ -74,3 +74,8 @@ async def analyze_audio(file: UploadFile = File(...)):
         print("FULL ERROR TRACE:")
         traceback.print_exc()
         return {"error": str(e)}
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
