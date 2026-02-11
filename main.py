@@ -7,7 +7,6 @@ import traceback
 import uvicorn
 app = FastAPI()
 
-whisper_model = whisper.load_model("base")
 
 emotion_classifier = pipeline(
     "text-classification",
@@ -21,6 +20,10 @@ def home():
 
 @app.post("/analyze/")
 async def analyze_audio(file: UploadFile = File(...)):
+    whisper_model = whisper.load_model("base")
+    emotion_classifier= pipeline(
+        "text-classification",
+        model="j-hartmann/emotion-english-distilroberta-base")
 
     try:
         if not file.filename.endswith((".wav", ".mp3", ".m4a",".3gp")):
