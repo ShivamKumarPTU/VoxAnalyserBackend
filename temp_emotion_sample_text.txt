@@ -1,0 +1,34 @@
+EMOTION SAMPLE TEXT FILE
+
+1.  JOY I feel absolutely amazing today! This is the best day of my
+    life. I am so happy and excited about the results. Everything is
+    going perfectly and I couldn’t be more grateful.
+
+2.  SADNESS I feel really down and lonely today. Nothing seems to be
+    going right for me. I miss those days when everything was simple. It
+    hurts more than I expected.
+
+3.  ANGER I am extremely frustrated with this situation. This is
+    completely unacceptable and unfair. Why does this always happen to
+    me? I am losing my patience.
+
+4.  FEAR I am scared about what might happen next. This uncertainty
+    makes me anxious. I feel nervous walking alone at night. Something
+    doesn’t feel safe.
+
+5.  SURPRISE Wow, I didn’t expect that at all! This is completely
+    unexpected. I am shocked by the sudden announcement. That really
+    surprised me.
+
+6.  DISGUST That smell is absolutely terrible. I can’t stand looking at
+    that mess. This is really unpleasant. It makes me feel
+    uncomfortable.
+
+7.  NEUTRAL I went to the store to buy groceries. The meeting starts at
+    10 AM tomorrow. The weather today is moderate. I completed the
+    assignment on time.
+
+8.  MIXED EMOTIONS I am happy about the opportunity but also nervous
+    about the challenge. I feel proud yet slightly disappointed. This
+    success brings excitement and responsibility. I’m relieved but still
+    worried about the future.
