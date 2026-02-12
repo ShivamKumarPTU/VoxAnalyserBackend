@@ -15,37 +15,30 @@ emotion_model = None
 def get_whisper():
     global whisper_model
     if whisper_model is None:
-        print("Loading Whisper model...")
         whisper_model = whisper.load_model("tiny")
-        print("Whisper model loaded.")
     return whisper_model
 
 
 def get_emotion():
     global emotion_model
     if emotion_model is None:
-        print("Loading Emotion model...")
         emotion_model = pipeline(
             "text-classification",
             model="j-hartmann/emotion-english-distilroberta-base",
             return_all_scores=True
         )
-        print("Emotion model loaded.")
     return emotion_model
 
 
-# 🔥 Load models at container startup
 @app.on_event("startup")
 def load_models():
-    print("Container starting... loading models")
     get_whisper()
     get_emotion()
-    print("All models loaded successfully")
 
 
 @app.get("/")
 def home():
-    return {"status": "running", "message": "AI Voice Sentiment API Ready"}
+    return {"status": "running"}
 
 
 @app.post("/analyze/")
@@ -62,11 +55,7 @@ async def analyze_audio(file: UploadFile = File(...)):
 
     try:
         model = get_whisper()
-
-        try:
-            result = model.transcribe(tmp_path, language="en", fp16=False)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+        result = model.transcribe(tmp_path, language="en", fp16=False)
 
         segments = []
         emo = get_emotion()
