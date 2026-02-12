@@ -13,8 +13,9 @@ RUN apt-get update && apt-get install -y \
 
 COPY requirements.txt .
 
-# Upgrade pip
-RUN pip install --upgrade pip
+# Upgrade pip AND setuptools
+# This is the CRUCIAL change: ensure setuptools is up-to-date
+RUN pip install --upgrade pip setuptools
 
 # Install PyTorch CPU wheels
 # Use specific versions that are known to work together.
