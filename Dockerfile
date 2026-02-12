@@ -1,8 +1,7 @@
-FROM python:3.10-slim
+FROM python:3.10
 
 WORKDIR /app
 
-# Install ffmpeg and system dependencies
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     gcc \
@@ -11,21 +10,17 @@ RUN apt-get update && apt-get install -y \
 
 COPY requirements.txt .
 
-# Install Python packages with optimizations
-RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu \
-    torch \
-    torchvision \
-    torchaudio \
-    && pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip
 
-# Pre-download models with progress indication
-RUN python -c "import whisper; print('Downloading Whisper model...'); whisper.load_model('base'); print('Whisper model downloaded')"
-RUN python -c "from transformers import pipeline; print('Downloading emotion model...'); pipeline('text-classification', model='j-hartmann/emotion-english-distilroberta-base'); print('Emotion model downloaded')"
+# Install torch CPU first
+RUN pip install --no-cache-dir torch==2.1.2+cpu torchaudio==2.1.2+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# Install rest
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Create necessary directories
-RUN mkdir -p /tmp/whisper-cache
+RUN mkdir -p /tmp/audio && chmod 777 /tmp/audio
 
-# Use environment variable for port
-CMD exec uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --limit-concurrency 1
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

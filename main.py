@@ -6,41 +6,33 @@ import shutil
 from transformers import pipeline
 import traceback
 import time
-import asyncio
-from contextlib import asynccontextmanager
+from pathlib import Path
 
-# Startup and shutdown events
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
-    print("🚀 Starting server with 4GB RAM, 2 CPUs...")
-    print("📦 Loading Whisper model (base)...")
-    start = time.time()
-    app.state.whisper_model = whisper.load_model("base")
-    print(f"✅ Whisper model loaded in {time.time() - start:.2f}s")
-    
-    print("📦 Loading emotion model...")
-    start = time.time()
-    app.state.emotion_classifier = pipeline(
-        "text-classification",
-        model="j-hartmann/emotion-english-distilroberta-base",
-        return_all_scores=True
-    )
-    print(f"✅ Emotion model loaded in {time.time() - start:.2f}s")
-    print("🎯 Server ready to accept requests!")
-    yield
-    # Cleanup
-    print("👋 Shutting down...")
+app = FastAPI()
 
-app = FastAPI(lifespan=lifespan)
+# Load models at startup with timing
+print("🚀 Loading models...")
+start_time = time.time()
+
+print("📦 Loading Whisper model (tiny)...")
+whisper_model = whisper.load_model("tiny")
+print(f"✓ Whisper loaded in {time.time() - start_time:.2f}s")
+
+print("📦 Loading emotion model...")
+emotion_classifier = pipeline(
+    "text-classification",
+    model="j-hartmann/emotion-english-distilroberta-base",
+    return_all_scores=True
+)
+print(f"✓ Emotion model loaded in {time.time() - start_time:.2f}s")
+print("✅ Server ready!")
 
 @app.get("/")
 def home():
     return {
-        "status": "Backend running in India region (asia-south1)",
-        "memory": "4GB",
-        "cpu": "2",
-        "concurrency": "1"
+        "status": "Emotion Analyzer Running",
+        "region": "asia-south1 (Mumbai)",
+        "model": "whisper-tiny"
     }
 
 @app.get("/health")
@@ -54,65 +46,59 @@ async def analyze_audio(file: UploadFile = File(...)):
         # Validate file type
         valid_extensions = (".wav", ".mp3", ".m4a", ".3gp", ".webm", ".ogg")
         if not file.filename.lower().endswith(valid_extensions):
-            raise HTTPException(400, f"Invalid file type. Supported: {valid_extensions}")
+            raise HTTPException(400, f"Invalid file type: {file.filename}")
 
-        print(f"📁 Processing file: {file.filename}")
+        print(f"📁 Processing: {file.filename}")
         
-        # Save uploaded file
-        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
+        # Windows-safe temp file handling
+        with tempfile.NamedTemporaryFile(
+            delete=False, 
+            suffix=Path(file.filename).suffix,
+            dir='/tmp/audio'  # Explicit temp directory
+        ) as tmp:
             temp_path = tmp.name
             shutil.copyfileobj(file.file, tmp)
 
-        # Transcribe with Whisper
-        print("🎤 Transcribing audio...")
-        result = app.state.whisper_model.transcribe(
+        # Transcribe with tiny model (fast!)
+        result = whisper_model.transcribe(
             temp_path,
             language="en",
-            task="transcribe",
-            fp16=False
+            fp16=False,
+            task="transcribe"
         )
         
         segments_data = []
-        print(f"📝 Processing {len(result.get('segments', []))} segments...")
-
+        
         for segment in result.get("segments", []):
             text = segment.get("text", "").strip()
-            if not text or len(text) < 2:  # Skip very short segments
+            if not text or len(text) < 2:
                 continue
 
-            # Get emotion
-            emotion_outputs = app.state.emotion_classifier(text)
+            # Get emotions
+            emotion_outputs = emotion_classifier(text)
             scores = emotion_outputs[0] if isinstance(emotion_outputs[0], list) else emotion_outputs
             
-            if scores and isinstance(scores, list):
+            if scores:
                 top_emotion = max(scores, key=lambda x: x["score"])
                 segments_data.append({
                     "start": round(segment.get("start", 0), 2),
                     "end": round(segment.get("end", 0), 2),
                     "text": text,
                     "emotion": top_emotion["label"],
-                    "confidence": round(float(top_emotion["score"]), 3),
-                    "all_emotions": {e["label"]: round(e["score"], 3) for e in scores[:3]}
+                    "confidence": round(top_emotion["score"], 3)
                 })
 
-        print(f"✅ Processed {len(segments_data)} segments")
-        return {
-            "segments": segments_data,
-            "total_segments": len(segments_data),
-            "filename": file.filename
-        }
+        print(f"✓ Processed {len(segments_data)} segments")
+        return {"segments": segments_data}
 
-    except HTTPException:
-        raise
     except Exception as e:
-        print("❌ ERROR:")
+        print("❌ Error:", str(e))
         traceback.print_exc()
         raise HTTPException(500, str(e))
     
     finally:
         if temp_path and os.path.exists(temp_path):
             os.unlink(temp_path)
-            print("🧹 Cleaned up temp file")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
@@ -120,6 +106,5 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=port,
-        workers=1,  # Single worker for 1 concurrency
-        limit_concurrency=1  # Match your concurrency setting
+        workers=1
     )
