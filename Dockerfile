@@ -26,7 +26,8 @@ RUN pip install --no-cache-dir --no-build-isolation -r requirements.txt
 # Copy application
 COPY . .
 
-# Set port
+# Cloud Run provides PORT env variable
 ENV PORT=8080
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Start FastAPI using Cloud Run PORT
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port $PORT"]
