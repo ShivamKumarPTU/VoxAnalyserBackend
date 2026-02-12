@@ -44,11 +44,10 @@ def home():
 @app.post("/analyze/")
 async def analyze_audio(file: UploadFile = File(...)):
 
-    ext = Path(file.filename).suffix.lower()
-    if ext not in (".wav", ".mp3", ".m4a", ".webm", ".ogg"):
-        raise HTTPException(status_code=400, detail="Invalid file type")
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Filename missing")
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = tmp.name
         file.file.seek(0)
         shutil.copyfileobj(file.file, tmp)
