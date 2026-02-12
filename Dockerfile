@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
 # Upgrade packaging tools
 RUN pip install --upgrade pip setuptools wheel
 
-# Install numpy
-RUN pip install numpy
+# 🔥 Install compatible NumPy version (VERY IMPORTANT)
+RUN pip install numpy==1.26.4
 
 # Install CPU-only torch
 RUN pip install torch==2.1.2+cpu torchaudio==2.1.2+cpu \
@@ -23,12 +23,11 @@ RUN pip install torch==2.1.2+cpu torchaudio==2.1.2+cpu \
 # Install Whisper from GitHub
 RUN pip install git+https://github.com/openai/whisper.git
 
-# Install remaining dependencies
+# Install other dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy app
+# Copy application
 COPY . .
 
-# Start FastAPI
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
