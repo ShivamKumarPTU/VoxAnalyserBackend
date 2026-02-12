@@ -55,8 +55,10 @@ async def analyze_audio(file: UploadFile = File(...)):
     content_type = file.content_type or ""
 
 
-    if not filename.endswith(allowed_extensions):
-      raise HTTPException(status_code=400, detail="Invalid file type")
+    ext = Path(file.filename).suffix.lower() if file.filename else ""
+
+    if ext not in (".wav", ".mp3", ".m4a", ".3gp"):
+      raise HTTPException(status_code=400, detail=f"Invalid file type: {ext}")
 
 
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
