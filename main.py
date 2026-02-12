@@ -1,83 +1,72 @@
 import os
 import tempfile
-import time
-from fastapi import FastAPI, File, UploadFile, HTTPException
 import whisper
 import shutil
-from transformers import pipeline
 from pathlib import Path
+from fastapi import FastAPI, File, UploadFile, HTTPException
+
+from transformers import pipeline
 
 app = FastAPI()
 
+# Globals
 whisper_model = None
-emotion_classifier = None
+emotion_model = None
 
-@app.on_event("startup")
-def load_models():
-    global whisper_model, emotion_classifier
+def get_whisper():
+    global whisper_model
+    if whisper_model is None:
+        whisper_model = whisper.load_model("tiny")
+    return whisper_model
 
-    print("🚀 Loading models...")
-    start = time.time()
-
-    whisper_model = whisper.load_model("tiny")
-    print(f"Whisper loaded in {time.time()-start:.2f}s")
-
-    emotion_classifier = pipeline(
-        "text-classification",
-        model="j-hartmann/emotion-english-distilroberta-base",
-        return_all_scores=True
-    )
-    print(f"Emotion model loaded in {time.time()-start:.2f}s")
-    print("✅ Models ready")
-
+def get_emotion():
+    global emotion_model
+    if emotion_model is None:
+        emotion_model = pipeline(
+            "text-classification",
+            model="j-hartmann/emotion-english-distilroberta-base",
+            return_all_scores=True
+        )
+    return emotion_model
 
 @app.get("/")
 def home():
-    return {"status": "running on cloud run"}
-
+    return {"status": "running"}
 
 @app.post("/analyze/")
 async def analyze_audio(file: UploadFile = File(...)):
-    temp_path = None
+    # Validate
+    ext = Path(file.filename).suffix.lower()
+    if ext not in (".wav", ".mp3", ".m4a", ".webm", ".ogg"):
+        raise HTTPException(400, "Invalid file type")
 
-    try:
-        valid_extensions = (".wav", ".mp3", ".m4a", ".webm", ".ogg")
-        if not file.filename.lower().endswith(valid_extensions):
-            raise HTTPException(400, "Invalid file type")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+        tmp_path = tmp.name
+        shutil.copyfileobj(file.file, tmp)
 
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=Path(file.filename).suffix
-        ) as tmp:
-            temp_path = tmp.name
-            shutil.copyfileobj(file.file, tmp)
+    # Transcribe
+    model = get_whisper()
+    result = model.transcribe(tmp_path, language="en", fp16=False)
 
-        result = whisper_model.transcribe(
-            temp_path,
-            language="en",
-            fp16=False
-        )
+    os.unlink(tmp_path)
 
-        segments_data = []
+    segments = []
+    emo = get_emotion()
 
-        for segment in result.get("segments", []):
-            text = segment.get("text", "").strip()
-            if not text:
-                continue
+    for s in result.get("segments", []):
+        text = s.get("text", "").strip()
+        if not text:
+            continue
 
-            scores = emotion_classifier(text)[0]
-            top = max(scores, key=lambda x: x["score"])
+        outputs = emo(text)[0]
+        best = max(outputs, key=lambda x: x["score"])
 
-            segments_data.append({
-                "start": round(segment["start"], 2),
-                "end": round(segment["end"], 2),
-                "text": text,
-                "emotion": top["label"],
-                "confidence": round(top["score"], 3)
-            })
+        segments.append({
+            "start": round(s["start"], 2),
+            "end": round(s["end"], 2),
+            "text": text,
+            "emotion": best["label"],
+            "confidence": round(best["score"], 3)
+        })
 
-        return {"segments": segments_data}
-
-    finally:
-        if temp_path and os.path.exists(temp_path):
-            os.unlink(temp_path)
+    return {"segments": segments}
