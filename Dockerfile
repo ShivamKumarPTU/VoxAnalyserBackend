@@ -11,19 +11,19 @@ RUN apt-get update && apt-get install -y \
     libsndfile1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy requirements.txt early
 COPY requirements.txt .
 
-# Upgrade pip AND setuptools
-# This is the CRUCIAL change: ensure setuptools is up-to-date
-RUN pip install --upgrade pip setuptools
+# CRUCIAL CHANGE: Install/Upgrade pip, setuptools, and wheel
+# This ensures these core build tools are present before any other pip operations
+RUN pip install --upgrade pip setuptools wheel
 
 # Install PyTorch CPU wheels
-# Use specific versions that are known to work together.
-# Ensure these versions are compatible with your transformers and whisper versions.
 RUN pip install --no-cache-dir torch==2.1.2+cpu torchaudio==2.1.2+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
 # Install Python dependencies from requirements.txt
+# This is where openai-whisper is installed and where the error currently occurs
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy app code
