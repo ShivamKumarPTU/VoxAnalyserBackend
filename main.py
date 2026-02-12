@@ -44,8 +44,18 @@ def home():
 @app.post("/analyze/")
 async def analyze_audio(file: UploadFile = File(...)):
 
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="Filename missing")
+    # 🔍 DEBUG START (ADD HERE)
+    print("Received filename:", file.filename)
+    print("Content type:", file.content_type)
+    # 🔍 DEBUG END
+
+    allowed_extensions = (".wav", ".mp3", ".m4a", ".3gp")
+    allowed_types = ("audio/",)
+
+    filename = file.filename.lower() if file.filename else ""
+
+    if not filename.endswith(allowed_extensions) and not file.content_type.startswith(allowed_types):
+        raise HTTPException(status_code=400, detail="Invalid file type")
 
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = tmp.name
