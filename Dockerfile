@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and stable setuptools
-RUN pip install --upgrade pip setuptools==65.5.1 wheel
+# Upgrade pip and install latest setuptools and wheel
+RUN pip install --upgrade pip setuptools wheel
 
 # Install torch CPU wheels first
 RUN pip install --no-cache-dir torch==2.1.2+cpu torchaudio==2.1.2+cpu \
@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir torch==2.1.2+cpu torchaudio==2.1.2+cpu \
 COPY requirements.txt .
 
 # Install remaining dependencies
-RUN pip install --no-cache-dir --no-build-isolation -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application
 COPY . .
